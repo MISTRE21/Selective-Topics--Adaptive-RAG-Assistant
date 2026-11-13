@@ -1,0 +1,285 @@
+﻿import json
+import os
+
+DEV_SET = [
+    {
+        "id": "dev_01",
+        "category": "factual_api",
+        "query": "What HTTP status code is returned by FastAPI when a path parameter fails validation?",
+        "relevant_doc_ids": ["01_routing_and_parameters.md#path-parameters"],
+        "ground_truth_answer": "FastAPI returns an HTTP 422 Unprocessable Entity error when a path parameter fails validation.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "dev_02",
+        "category": "code_synthesis",
+        "query": "How do you define a dependency with cleanup or teardown logic?",
+        "relevant_doc_ids": ["03_dependency_injection.md#dependencies-with-yield-context-managers-db-sessions"],
+        "ground_truth_answer": "Use a generator function with `yield`. Code prior to yield runs as setup, and code after yield in a finally block runs as teardown.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "dev_03",
+        "category": "multi_hop",
+        "query": "Can background tasks be added inside custom dependencies in FastAPI?",
+        "relevant_doc_ids": [
+            "03_dependency_injection.md#defining-and-using-dependencies",
+            "06_background_tasks.md#background-tasks-in-dependencies"
+        ],
+        "ground_truth_answer": "Yes, you can declare BackgroundTasks as a parameter in a dependency function, and call background_tasks.add_task() inside it.",
+        "expected_route": "retrieve_multi_hop"
+    },
+    {
+        "id": "dev_04",
+        "category": "unanswerable_negative",
+        "query": "How do I configure Django ORM models inside FastAPI using @app.register_model?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "This feature is not supported in FastAPI documentation. FastAPI uses Pydantic or SQLModel/SQLAlchemy, and does not have an @app.register_model decorator.",
+        "expected_route": "reject"
+    },
+    {
+        "id": "dev_05",
+        "category": "adversarial_paraphrase",
+        "query": "How do I filter out confidential attributes like passwords from outbound HTTP payloads?",
+        "relevant_doc_ids": ["01_routing_and_parameters.md#response-model-and-filtering"],
+        "ground_truth_answer": "Use the response_model parameter in route decorators (e.g., response_model=UserOut) to automatically filter sensitive fields from the output response.",
+        "expected_route": "retrieve_standard"
+    }
+]
+
+HELD_OUT_TEST = [
+    # Category 1: Factual API
+    {
+        "id": "test_01",
+        "category": "factual_api",
+        "query": "What parameter is used in FastAPI route decorators to specify a 201 response status?",
+        "relevant_doc_ids": ["01_routing_and_parameters.md#request-body-and-status-codes"],
+        "ground_truth_answer": "The `status_code` parameter is used in the route decorator, for example `status_code=status.HTTP_201_CREATED`.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_02",
+        "category": "factual_api",
+        "query": "How do you enforce that a path parameter only accepts predefined categorical string values?",
+        "relevant_doc_ids": ["01_routing_and_parameters.md#path-parameters-with-predefined-values"],
+        "ground_truth_answer": "Use a Python `Enum` inheriting from both `str` and `Enum`, and declare the path parameter with that Enum type hint.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_03",
+        "category": "factual_api",
+        "query": "What HTTP test client does FastAPI provide and what underlying library is it based on?",
+        "relevant_doc_ids": ["08_testing_and_overrides.md#testclient"],
+        "ground_truth_answer": "FastAPI provides `TestClient`, which is based on `httpx`.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_04",
+        "category": "factual_api",
+        "query": "Which class from fastapi.security is used to extract bearer tokens with OAuth2 password flows?",
+        "relevant_doc_ids": ["04_security_and_auth.md#oauth2-with-password-flow-and-bearer-tokens"],
+        "ground_truth_answer": "The `OAuth2PasswordBearer` class is used, instantiated with tokenUrl (e.g. `OAuth2PasswordBearer(tokenUrl='token')`).",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_05",
+        "category": "factual_api",
+        "query": "Which decorator is used to register custom exception handlers in a FastAPI application?",
+        "relevant_doc_ids": ["07_error_handling.md#custom-exception-handlers"],
+        "ground_truth_answer": "Use `@app.exception_handler(ExceptionClass)` to register custom exception handlers.",
+        "expected_route": "retrieve_standard"
+    },
+
+    # Category 2: Code Synthesis
+    {
+        "id": "test_06",
+        "category": "code_synthesis",
+        "query": "How can I mock or replace database connections in unit tests without changing endpoint code?",
+        "relevant_doc_ids": ["08_testing_and_overrides.md#overriding-dependencies-during-testing"],
+        "ground_truth_answer": "Use `app.dependency_overrides[get_db] = override_get_db` to substitute dependencies during tests with TestClient.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_07",
+        "category": "code_synthesis",
+        "query": "How do you calculate and attach execution duration headers to every HTTP response in FastAPI?",
+        "relevant_doc_ids": ["05_middleware_and_cors.md#custom-middleware-with-http"],
+        "ground_truth_answer": "Define custom middleware using `@app.middleware('http')`, record start time, await `call_next(request)`, calculate duration, and set `response.headers['X-Process-Time']`.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_08",
+        "category": "code_synthesis",
+        "query": "How do you execute an asynchronous notification function after sending the HTTP response?",
+        "relevant_doc_ids": ["06_background_tasks.md#using-backgroundtasks"],
+        "ground_truth_answer": "Add `background_tasks: BackgroundTasks` as a parameter to the path operation and call `background_tasks.add_task(send_notification, email, ...)`. ",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_09",
+        "category": "code_synthesis",
+        "query": "How do you validate in Pydantic that an account PIN contains exactly 4 digits?",
+        "relevant_doc_ids": ["02_request_validation_pydantic.md#field-validation-and-custom-validators"],
+        "ground_truth_answer": "Use `@field_validator('pin')` as a classmethod on the Pydantic BaseModel to check `v.isdigit() and len(v) == 4` and raise ValueError if invalid.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_10",
+        "category": "code_synthesis",
+        "query": "How do you permit web frontend applications hosted on localhost:3000 to send requests with credentials?",
+        "relevant_doc_ids": ["05_middleware_and_cors.md#cors-cross-origin-resource-sharing"],
+        "ground_truth_answer": "Add `CORSMiddleware` with `app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:3000'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])`.",
+        "expected_route": "retrieve_standard"
+    },
+
+    # Category 3: Multi-Hop / Complex Queries
+    {
+        "id": "test_11",
+        "category": "multi_hop",
+        "query": "How do dependencies with yield interact with database session closing and route-level error exceptions?",
+        "relevant_doc_ids": [
+            "03_dependency_injection.md#dependencies-with-yield-context-managers-db-sessions",
+            "07_error_handling.md#httpexception"
+        ],
+        "ground_truth_answer": "In `yield` dependencies, the teardown code in the `finally` block runs after the response or after an exception is caught, ensuring the database session closes even if an HTTPException is raised.",
+        "expected_route": "retrieve_multi_hop"
+    },
+    {
+        "id": "test_12",
+        "category": "multi_hop",
+        "query": "When should developers use BackgroundTasks instead of dedicated message queues like Celery?",
+        "relevant_doc_ids": [
+            "06_background_tasks.md#difference-from-celery-task-queues"
+        ],
+        "ground_truth_answer": "Use BackgroundTasks for lightweight operations within the same process; use Celery or message queues for CPU-heavy tasks, distributed compute, or task persistence across restarts.",
+        "expected_route": "retrieve_multi_hop"
+    },
+    {
+        "id": "test_13",
+        "category": "multi_hop",
+        "query": "How do you secure an endpoint with OAuth2 and simultaneously log the user activity to an audit file in the background?",
+        "relevant_doc_ids": [
+            "04_security_and_auth.md#oauth2-with-password-flow-and-bearer-tokens",
+            "06_background_tasks.md#background-tasks-in-dependencies"
+        ],
+        "ground_truth_answer": "Authenticate the user via OAuth2PasswordBearer in a dependency or route, and inject `BackgroundTasks` to enqueue an audit log writer function.",
+        "expected_route": "retrieve_multi_hop"
+    },
+    {
+        "id": "test_14",
+        "category": "multi_hop",
+        "query": "How can you intercept and customize the schema validation error response when invalid Pydantic data is submitted?",
+        "relevant_doc_ids": [
+            "02_request_validation_pydantic.md#pydantic-models",
+            "07_error_handling.md#overriding-request-validation-errors"
+        ],
+        "ground_truth_answer": "Register a custom exception handler with `@app.exception_handler(RequestValidationError)` to catch Pydantic validation failures and return a custom response.",
+        "expected_route": "retrieve_multi_hop"
+    },
+    {
+        "id": "test_15",
+        "category": "multi_hop",
+        "query": "What is the recommended approach to test an endpoint that has both database dependencies and background tasks?",
+        "relevant_doc_ids": [
+            "06_background_tasks.md#using-backgroundtasks",
+            "08_testing_and_overrides.md#overriding-dependencies-during-testing"
+        ],
+        "ground_truth_answer": "Use `TestClient` with `app.dependency_overrides` to substitute the database dependency with a test fixture, and verify the background task execution via side effects or mocked callbacks.",
+        "expected_route": "retrieve_multi_hop"
+    },
+
+    # Category 4: Adversarial Paraphrase / Semantic Gap
+    {
+        "id": "test_16",
+        "category": "adversarial_paraphrase",
+        "query": "How do I conceal internal model attributes from external API clients upon JSON serialization?",
+        "relevant_doc_ids": ["01_routing_and_parameters.md#response-model-and-filtering"],
+        "ground_truth_answer": "Use `response_model` on the path decorator (such as `response_model=UserOut`) to automatically filter out private attributes from output responses.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_17",
+        "category": "adversarial_paraphrase",
+        "query": "How do you enforce string regex formatting on incoming URL search terms?",
+        "relevant_doc_ids": ["02_request_validation_pydantic.md#query-and-path-validation-via-fastapi"],
+        "ground_truth_answer": "Use `Query(..., pattern='...')` to declare regex validation rules for query parameters.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_18",
+        "category": "adversarial_paraphrase",
+        "query": "How do you restrict browser requests originating from third-party client domains?",
+        "relevant_doc_ids": ["05_middleware_and_cors.md#cors-cross-origin-resource-sharing"],
+        "ground_truth_answer": "Configure `CORSMiddleware` using `app.add_middleware(CORSMiddleware, allow_origins=[...])` specifying permitted domains.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_19",
+        "category": "adversarial_paraphrase",
+        "query": "How can you tear down resources like connection pools after an HTTP call terminates?",
+        "relevant_doc_ids": ["03_dependency_injection.md#dependencies-with-yield-context-managers-db-sessions"],
+        "ground_truth_answer": "Use a dependency with `yield` and place resource cleanup in the `finally` block.",
+        "expected_route": "retrieve_standard"
+    },
+    {
+        "id": "test_20",
+        "category": "adversarial_paraphrase",
+        "query": "What mechanism allows executing code both preceding and subsequent to route handler execution?",
+        "relevant_doc_ids": ["05_middleware_and_cors.md#custom-middleware-with-http"],
+        "ground_truth_answer": "Use `@app.middleware('http')` which receives `request` and `call_next` to run logic before and after calling `await call_next(request)`.",
+        "expected_route": "retrieve_standard"
+    },
+
+    # Category 5: Unanswerable / Negative / Hallucination-Prone
+    {
+        "id": "test_21",
+        "category": "unanswerable_negative",
+        "query": "How do you configure Hibernate entity relationships in FastAPI with @Entity and @Table?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "This feature does not exist in FastAPI documentation. Hibernate and @Entity are Java frameworks, not FastAPI components.",
+        "expected_route": "reject"
+    },
+    {
+        "id": "test_22",
+        "category": "unanswerable_negative",
+        "query": "What is the function of fastapi.utils.deprecated_cache_resolver() in version 2.0?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "The function `fastapi.utils.deprecated_cache_resolver()` does not exist in FastAPI documentation.",
+        "expected_route": "reject"
+    },
+    {
+        "id": "test_23",
+        "category": "unanswerable_negative",
+        "query": "How do I mount a Kubernetes pod daemon directly using @app.k8s_sidecar?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "FastAPI does not have an `@app.k8s_sidecar` decorator or direct Kubernetes pod mounting functionality.",
+        "expected_route": "reject"
+    },
+    {
+        "id": "test_24",
+        "category": "unanswerable_negative",
+        "query": "How do you activate React JSX server-side rendering natively inside FastAPI route returns?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "FastAPI does not support native React JSX server-side rendering; it returns JSON, HTML templates via Jinja2, or responses.",
+        "expected_route": "reject"
+    },
+    {
+        "id": "test_25",
+        "category": "unanswerable_negative",
+        "query": "What configuration setting in FastAPI automatically creates GraphQL resolvers from Django models?",
+        "relevant_doc_ids": [],
+        "ground_truth_answer": "FastAPI does not have automatic GraphQL resolver generation from Django models.",
+        "expected_route": "reject"
+    }
+]
+
+out_bench = r"C:\Users\mistr\.gemini\antigravity\scratch\adaptive_rag_assistant\data\benchmarks"
+os.makedirs(out_bench, exist_ok=True)
+
+with open(os.path.join(out_bench, "dev_set.json"), "w", encoding="utf-8") as f:
+    json.dump(DEV_SET, f, indent=2)
+
+with open(os.path.join(out_bench, "held_out_test.json"), "w", encoding="utf-8") as f:
+    json.dump(HELD_OUT_TEST, f, indent=2)
+
+print(f"Successfully generated dev set ({len(DEV_SET)} queries) and held-out test set ({len(HELD_OUT_TEST)} queries).")

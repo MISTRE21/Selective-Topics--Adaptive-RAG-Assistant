@@ -1,0 +1,25 @@
+﻿from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+RAW_DOCS_DIR = DATA_DIR / "raw_docs"
+PROCESSED_DIR = DATA_DIR / "processed"
+BENCHMARKS_DIR = DATA_DIR / "benchmarks"
+REPORTS_DIR = BASE_DIR / "reports"
+
+
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIM = 384
+
+
+MAX_CHUNK_CHARS = 1200
+CHUNK_OVERLAP_CHARS = 150
+
+
+TOP_K_RETRIEVAL = 3
+BM25_TOP_K = 3
+
+
+RELEVANCE_GRADE_THRESHOLD = 0.45
+HALLUCINATION_OVERLAP_THRESHOLD = 0.35
+MAX_REWRITE_ATTEMPTS = 1

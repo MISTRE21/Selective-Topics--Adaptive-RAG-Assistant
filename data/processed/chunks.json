@@ -1,0 +1,233 @@
+[
+  {
+    "chunk_id": "01_routing_and_parameters.md#overview",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Overview",
+    "content": "### Context: FastAPI: Routing and Parameters > Overview\n\nFastAPI allows declaring path parameters, query parameters, request bodies, and custom status codes using standard Python type annotations. FastAPI uses these declarations for automatic data parsing, validation, serialization, and interactive OpenAPI documentation.",
+    "char_length": 322
+  },
+  {
+    "chunk_id": "01_routing_and_parameters.md#path-parameters",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Path Parameters",
+    "content": "### Context: FastAPI: Routing and Parameters > Path Parameters\n\nYou declare path \"parameters\" or \"variables\" with standard Python format string syntax `{param_name}`:\n\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/items/{item_id}\")\nasync def read_item(item_id: int):\n    return {\"item_id\": item_id}\n```\n\nThe type hint `item_id: int` enforces integer validation. If a user passes `/items/foo`, FastAPI returns an HTTP 422 Unprocessable Entity error with detailed error metadata.",
+    "char_length": 498
+  },
+  {
+    "chunk_id": "01_routing_and_parameters.md#path-parameters-with-predefined-values",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Path Parameters with Predefined Values",
+    "content": "### Context: FastAPI: Routing and Parameters > Path Parameters with Predefined Values\n\nIf you have a path parameter that receives predefined values, you can use a Python `Enum`:\n\n```python\nfrom enum import Enum\nfrom fastapi import FastAPI\n\nclass ModelName(str, Enum):\n    alexnet = \"alexnet\"\n    resnet = \"resnet\"\n    lenet = \"lenet\"\n\n@app.get(\"/models/{model_name}\")\nasync def get_model(model_name: ModelName):\n    if model_name is ModelName.alexnet:\n        return {\"model_name\": model_name, \"message\": \"Deep Learning FTW!\"}\n    return {\"model_name\": model_name, \"message\": \"Have some residuals\"}\n```",
+    "char_length": 602
+  },
+  {
+    "chunk_id": "01_routing_and_parameters.md#query-parameters",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Query Parameters",
+    "content": "### Context: FastAPI: Routing and Parameters > Query Parameters\n\nFunction parameters that are not part of path parameters are automatically interpreted as query parameters:\n\n```python\n@app.get(\"/items/\")\nasync def read_items(skip: int = 0, limit: int = 10, q: str | None = None):\n    return {\"skip\": skip, \"limit\": limit, \"q\": q}\n```\n\nDefault values make the parameter optional. When `q: str | None = None`, omitting `q` sets it to `None`.",
+    "char_length": 439
+  },
+  {
+    "chunk_id": "01_routing_and_parameters.md#request-body-and-status-codes",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Request Body and Status Codes",
+    "content": "### Context: FastAPI: Routing and Parameters > Request Body and Status Codes\n\nTo declare a request body, combine Pydantic models with the HTTP decorator. You can specify response status codes via `status_code` argument in decorators:\n\n```python\nfrom fastapi import FastAPI, status\nfrom pydantic import BaseModel\n\nclass Item(BaseModel):\n    name: str\n    price: float\n    is_offer: bool = False\n\n@app.post(\"/items/\", status_code=status.HTTP_201_CREATED)\nasync def create_item(item: Item):\n    return item\n```",
+    "char_length": 507
+  },
+  {
+    "chunk_id": "01_routing_and_parameters.md#response-model-and-filtering",
+    "doc_name": "01_routing_and_parameters.md",
+    "section_title": "FastAPI: Routing and Parameters - Response Model and Filtering",
+    "content": "### Context: FastAPI: Routing and Parameters > Response Model and Filtering\n\nUse `response_model` to filter sensitive data from output responses:\n\n```python\n@app.post(\"/user/\", response_model=UserOut)\nasync def create_user(user: UserIn):\n    return user  # UserOut filters out password_hash automatically\n```",
+    "char_length": 308
+  },
+  {
+    "chunk_id": "02_request_validation_pydantic.md#pydantic-models",
+    "doc_name": "02_request_validation_pydantic.md",
+    "section_title": "FastAPI: Request Validation and Pydantic - Pydantic Models",
+    "content": "### Context: FastAPI: Request Validation and Pydantic > Pydantic Models\n\nFastAPI uses Pydantic to define schemas and validate incoming request payloads. When an endpoint receives data, Pydantic parses the payload into declared types, validates constraints, and raises `RequestValidationError` if validation fails.\n\n```python\nfrom pydantic import BaseModel, Field, EmailStr\n\nclass UserProfile(BaseModel):\n    username: str = Field(..., min_length=3, max_length=50, description=\"Unique handle\")\n    email: EmailStr\n    age: int = Field(gt=0, le=120, description=\"Age in years\")\n    bio: str | None = Field(default=None, max_length=300)\n```",
+    "char_length": 637
+  },
+  {
+    "chunk_id": "02_request_validation_pydantic.md#nested-models-and-lists",
+    "doc_name": "02_request_validation_pydantic.md",
+    "section_title": "FastAPI: Request Validation and Pydantic - Nested Models and Lists",
+    "content": "### Context: FastAPI: Request Validation and Pydantic > Nested Models and Lists\n\nPydantic models can be deeply nested to validate complex JSON trees:\n\n```python\nfrom pydantic import BaseModel\n\nclass Tag(BaseModel):\n    name: str\n    category: str\n\nclass Article(BaseModel):\n    title: str\n    content: str\n    tags: list[Tag] = []\n```",
+    "char_length": 334
+  },
+  {
+    "chunk_id": "02_request_validation_pydantic.md#field-validation-and-custom-validators",
+    "doc_name": "02_request_validation_pydantic.md",
+    "section_title": "FastAPI: Request Validation and Pydantic - Field Validation and Custom Validators",
+    "content": "### Context: FastAPI: Request Validation and Pydantic > Field Validation and Custom Validators\n\nIn Pydantic v2 (supported by modern FastAPI), you use `@field_validator` and `@model_validator`:\n\n```python\nfrom pydantic import BaseModel, field_validator\n\nclass Account(BaseModel):\n    pin: str\n\n    @field_validator(\"pin\")\n    @classmethod\n    def validate_pin(cls, v: str) -> str:\n        if not v.isdigit() or len(v) != 4:\n            raise ValueError(\"PIN must be exactly 4 digits\")\n        return v\n```",
+    "char_length": 504
+  },
+  {
+    "chunk_id": "02_request_validation_pydantic.md#query-and-path-validation-via-fastapi",
+    "doc_name": "02_request_validation_pydantic.md",
+    "section_title": "FastAPI: Request Validation and Pydantic - Query and Path Validation via FastAPI",
+    "content": "### Context: FastAPI: Request Validation and Pydantic > Query and Path Validation via FastAPI\n\nFastAPI also provides `Query`, `Path`, `Header`, and `Cookie` helpers for scalar validation:\n\n```python\nfrom fastapi import FastAPI, Query, Path\n\napp = FastAPI()\n\n@app.get(\"/search/\")\nasync def search(\n    q: str = Query(..., min_length=3, max_length=50, pattern=\"^[a-zA-Z0-9_]+$\"),\n    page: int = Query(1, ge=1)\n):\n    return {\"query\": q, \"page\": page}\n```",
+    "char_length": 453
+  },
+  {
+    "chunk_id": "03_dependency_injection.md#what-is-dependency-injection",
+    "doc_name": "03_dependency_injection.md",
+    "section_title": "FastAPI: Dependency Injection - What is Dependency Injection?",
+    "content": "### Context: FastAPI: Dependency Injection > What is Dependency Injection?\n\nDependency Injection (DI) allows endpoints to declare dependencies required for business logic, database sessions, authentication, or external API clients. FastAPI resolves dependencies hierarchically and caches results across a single request when configured.",
+    "char_length": 336
+  },
+  {
+    "chunk_id": "03_dependency_injection.md#defining-and-using-dependencies",
+    "doc_name": "03_dependency_injection.md",
+    "section_title": "FastAPI: Dependency Injection - Defining and Using Dependencies",
+    "content": "### Context: FastAPI: Dependency Injection > Defining and Using Dependencies\n\nDependencies are declared using `Depends`:\n\n```python\nfrom fastapi import Depends, FastAPI\n\napp = FastAPI()\n\nasync def common_pagination(skip: int = 0, limit: int = 20):\n    return {\"skip\": skip, \"limit\": limit}\n\n@app.get(\"/users/\")\nasync def get_users(pagination: dict = Depends(common_pagination)):\n    return {\"users\": [\"alice\", \"bob\"], \"pagination\": pagination}\n```",
+    "char_length": 447
+  },
+  {
+    "chunk_id": "03_dependency_injection.md#class-based-dependencies",
+    "doc_name": "03_dependency_injection.md",
+    "section_title": "FastAPI: Dependency Injection - Class-based Dependencies",
+    "content": "### Context: FastAPI: Dependency Injection > Class-based Dependencies\n\nClasses can also be used as dependencies:\n\n```python\nclass CommonQueryParams:\n    def __init__(self, q: str | None = None, skip: int = 0, limit: int = 100):\n        self.q = q\n        self.skip = skip\n        self.limit = limit\n\n@app.get(\"/items/\")\nasync def read_items(params: CommonQueryParams = Depends(CommonQueryParams)):\n    return {\"params\": params.__dict__}\n```",
+    "char_length": 440
+  },
+  {
+    "chunk_id": "03_dependency_injection.md#dependencies-with-yield-context-managers-db-sessions",
+    "doc_name": "03_dependency_injection.md",
+    "section_title": "FastAPI: Dependency Injection - Dependencies with `yield` (Context Managers / DB Sessions)",
+    "content": "### Context: FastAPI: Dependency Injection > Dependencies with `yield` (Context Managers / DB Sessions)\n\nFastAPI supports dependencies that use `yield` instead of `return`. This allows code before `yield` to run as setup, and code after `yield` to run as teardown even if exceptions occur during request handling:\n\n```python\nfrom fastapi import Depends\n\nasync def get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.get(\"/users/{user_id}\")\ndef read_user(user_id: int, db: Session = Depends(get_db)):\n    return db.query(User).filter(User.id == user_id).first()\n```",
+    "char_length": 610
+  },
+  {
+    "chunk_id": "03_dependency_injection.md#global-and-router-level-dependencies",
+    "doc_name": "03_dependency_injection.md",
+    "section_title": "FastAPI: Dependency Injection - Global and Router-level Dependencies",
+    "content": "### Context: FastAPI: Dependency Injection > Global and Router-level Dependencies\n\nYou can apply dependencies across an entire `APIRouter` or `FastAPI` instance:\n\n```python\nfrom fastapi import FastAPI, Depends\n\napp = FastAPI(dependencies=[Depends(verify_token), Depends(verify_key)])\n```",
+    "char_length": 287
+  },
+  {
+    "chunk_id": "04_security_and_auth.md#oauth2-with-password-flow-and-bearer-tokens",
+    "doc_name": "04_security_and_auth.md",
+    "section_title": "FastAPI: Security and Authentication - OAuth2 with Password Flow and Bearer Tokens",
+    "content": "### Context: FastAPI: Security and Authentication > OAuth2 with Password Flow and Bearer Tokens\n\nFastAPI provides built-in utilities in `fastapi.security` for OAuth2, API Keys, and HTTP Basic/Bearer auth.\n\n```python\nfrom fastapi import Depends, FastAPI, HTTPException, status\nfrom fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm\n\napp = FastAPI()\n\noauth2_scheme = OAuth2PasswordBearer(tokenUrl=\"token\")\n\n@app.post(\"/token\")\nasync def login(form_data: OAuth2PasswordRequestForm = Depends()):\n    user = authenticate_user(form_data.username, form_data.password)\n    if not user:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail=\"Incorrect username or password\",\n            headers={\"WWW-Authenticate\": \"Bearer\"},\n        )\n    access_token = create_access_token(data={\"sub\": user.username})\n    return {\"access_token\": access_token, \"token_type\": \"bearer\"}\n\n@app.get(\"/users/me\")\nasync def read_users_me(token: str = Depends(oauth2_scheme)):\n    user = decode_token(token)\n    return user\n```",
+    "char_length": 1067
+  },
+  {
+    "chunk_id": "04_security_and_auth.md#security-scopes",
+    "doc_name": "04_security_and_auth.md",
+    "section_title": "FastAPI: Security and Authentication - Security Scopes",
+    "content": "### Context: FastAPI: Security and Authentication > Security Scopes\n\nOAuth2 scopes allow granular permissions:\n\n```python\nfrom fastapi.security import SecurityScopes\n\nasync def get_current_user(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):\n    if security_scopes.scopes:\n        authenticate_scopes(token, security_scopes.scopes)\n    return decode_user(token)\n```",
+    "char_length": 388
+  },
+  {
+    "chunk_id": "04_security_and_auth.md#httpbearer-and-apikeyheader",
+    "doc_name": "04_security_and_auth.md",
+    "section_title": "FastAPI: Security and Authentication - HTTPBearer and APIKeyHeader",
+    "content": "### Context: FastAPI: Security and Authentication > HTTPBearer and APIKeyHeader\n\nFor simple token authorization without OAuth2 password flow:\n\n```python\nfrom fastapi.security import HTTPBearer, HTTPAuthorizationCredentials\n\nauth_scheme = HTTPBearer()\n\n@app.get(\"/api/protected\")\ndef protected_route(credentials: HTTPAuthorizationCredentials = Depends(auth_scheme)):\n    return {\"token\": credentials.credentials}\n```",
+    "char_length": 415
+  },
+  {
+    "chunk_id": "05_middleware_and_cors.md#what-is-middleware",
+    "doc_name": "05_middleware_and_cors.md",
+    "section_title": "FastAPI: Middleware and CORS - What is Middleware?",
+    "content": "### Context: FastAPI: Middleware and CORS > What is Middleware?\n\nMiddleware is a function that runs before every request is processed by an endpoint, and after every response is generated. It can inspect and modify request headers, enforce rate limits, calculate execution timing, or block requests.",
+    "char_length": 299
+  },
+  {
+    "chunk_id": "05_middleware_and_cors.md#custom-middleware-with-http",
+    "doc_name": "05_middleware_and_cors.md",
+    "section_title": "FastAPI: Middleware and CORS - Custom Middleware with `http`",
+    "content": "### Context: FastAPI: Middleware and CORS > Custom Middleware with `http`\n\nUse `@app.middleware(\"http\")` to declare HTTP middleware:\n\n```python\nimport time\nfrom fastapi import FastAPI, Request\n\napp = FastAPI()\n\n@app.middleware(\"http\")\nasync def add_process_time_header(request: Request, call_next):\n    start_time = time.time()\n    response = await call_next(request)\n    process_time = time.time() - start_time\n    response.headers[\"X-Process-Time\"] = str(process_time)\n    return response\n```\n\n`call_next` passes the request to the endpoint or subsequent middleware.",
+    "char_length": 568
+  },
+  {
+    "chunk_id": "05_middleware_and_cors.md#cors-cross-origin-resource-sharing",
+    "doc_name": "05_middleware_and_cors.md",
+    "section_title": "FastAPI: Middleware and CORS - CORS (Cross-Origin Resource Sharing)",
+    "content": "### Context: FastAPI: Middleware and CORS > CORS (Cross-Origin Resource Sharing)\n\nTo allow browsers to make requests from different origins (domains/ports), add `CORSMiddleware`:\n\n```python\nfrom fastapi.middleware.cors import CORSMiddleware\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"http://localhost:3000\", \"https://app.example.com\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n```",
+    "char_length": 437
+  },
+  {
+    "chunk_id": "05_middleware_and_cors.md#trustedhostmiddleware-and-gzipmiddleware",
+    "doc_name": "05_middleware_and_cors.md",
+    "section_title": "FastAPI: Middleware and CORS - TrustedHostMiddleware and GZipMiddleware",
+    "content": "### Context: FastAPI: Middleware and CORS > TrustedHostMiddleware and GZipMiddleware\n\nFastAPI also ships with standard Starlette middleware:\n\n```python\nfrom fastapi.middleware.trustedhost import TrustedHostMiddleware\nfrom fastapi.middleware.gzip import GZipMiddleware\n\napp.add_middleware(TrustedHostMiddleware, allowed_hosts=[\"example.com\", \"*.example.com\"])\napp.add_middleware(GZipMiddleware, minimum_size=1000)\n```",
+    "char_length": 416
+  },
+  {
+    "chunk_id": "06_background_tasks.md#what-are-background-tasks",
+    "doc_name": "06_background_tasks.md",
+    "section_title": "FastAPI: Background Tasks - What are Background Tasks?",
+    "content": "### Context: FastAPI: Background Tasks > What are Background Tasks?\n\nBackground tasks allow long-running operations (like sending welcome emails, processing uploaded logs, or updating analytics) to execute after returning an HTTP response to the client.",
+    "char_length": 253
+  },
+  {
+    "chunk_id": "06_background_tasks.md#using-backgroundtasks",
+    "doc_name": "06_background_tasks.md",
+    "section_title": "FastAPI: Background Tasks - Using `BackgroundTasks`",
+    "content": "### Context: FastAPI: Background Tasks > Using `BackgroundTasks`\n\nImport `BackgroundTasks` from `fastapi` and declare it as a parameter in your route function:\n\n```python\nfrom fastapi import BackgroundTasks, FastAPI\n\napp = FastAPI()\n\ndef send_notification(email: str, message: str = \"\"):\n    with open(\"notifications.log\", mode=\"a\") as f:\n        f.write(f\"Notification to {email}: {message}\n\")\n\n@app.post(\"/send-notification/{email}\")\nasync def send_notification_endpoint(\n    email: str,\n    background_tasks: BackgroundTasks\n):\n    background_tasks.add_task(send_notification, email, message=\"Welcome to the service!\")\n    return {\"message\": \"Notification scheduled in the background\"}\n```",
+    "char_length": 692
+  },
+  {
+    "chunk_id": "06_background_tasks.md#background-tasks-in-dependencies",
+    "doc_name": "06_background_tasks.md",
+    "section_title": "FastAPI: Background Tasks - Background Tasks in Dependencies",
+    "content": "### Context: FastAPI: Background Tasks > Background Tasks in Dependencies\n\nYou can also inject `BackgroundTasks` inside dependencies:\n\n```python\ndef write_audit_log(event: str):\n    log_to_db(event)\n\ndef get_current_user_with_audit(\n    background_tasks: BackgroundTasks,\n    token: str = Depends(oauth2_scheme)\n):\n    user = verify_token(token)\n    background_tasks.add_task(write_audit_log, f\"User {user.id} accessed route\")\n    return user\n```",
+    "char_length": 446
+  },
+  {
+    "chunk_id": "06_background_tasks.md#difference-from-celery-task-queues",
+    "doc_name": "06_background_tasks.md",
+    "section_title": "FastAPI: Background Tasks - Difference from Celery / Task Queues",
+    "content": "### Context: FastAPI: Background Tasks > Difference from Celery / Task Queues\n\n`BackgroundTasks` runs inside the same asyncio event loop or threadpool as the FastAPI server process. For heavy distributed computing, CPU-intensive image rendering, or worker persistence across reboots, use Celery, RQ, or ARQ instead.",
+    "char_length": 315
+  },
+  {
+    "chunk_id": "07_error_handling.md#httpexception",
+    "doc_name": "07_error_handling.md",
+    "section_title": "FastAPI: Error Handling and Exceptions - HTTPException",
+    "content": "### Context: FastAPI: Error Handling and Exceptions > HTTPException\n\nTo return HTTP error responses to the client, raise `HTTPException`:\n\n```python\nfrom fastapi import FastAPI, HTTPException, status\n\napp = FastAPI()\n\nitems = {\"foo\": \"The Foo Wrestlers\"}\n\n@app.get(\"/items/{item_id}\")\nasync def read_item(item_id: str):\n    if item_id not in items:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail=\"Item not found\",\n            headers={\"X-Error\": \"ResourceMissing\"}\n        )\n    return {\"item\": items[item_id]}\n```",
+    "char_length": 566
+  },
+  {
+    "chunk_id": "07_error_handling.md#custom-exception-handlers",
+    "doc_name": "07_error_handling.md",
+    "section_title": "FastAPI: Error Handling and Exceptions - Custom Exception Handlers",
+    "content": "### Context: FastAPI: Error Handling and Exceptions > Custom Exception Handlers\n\nYou can create custom exception classes and register global handlers with `@app.exception_handler()`:\n\n```python\nfrom fastapi import FastAPI, Request\nfrom fastapi.responses import JSONResponse\n\nclass UnicornException(Exception):\n    def __init__(self, name: str):\n        self.name = name\n\napp = FastAPI()\n\n@app.exception_handler(UnicornException)\nasync def unicorn_exception_handler(request: Request, exc: UnicornException):\n    return JSONResponse(\n        status_code=418,\n        content={\"message\": f\"Oops! {exc.name} did something weird. Rainbows!\"},\n    )\n```",
+    "char_length": 647
+  },
+  {
+    "chunk_id": "07_error_handling.md#overriding-request-validation-errors",
+    "doc_name": "07_error_handling.md",
+    "section_title": "FastAPI: Error Handling and Exceptions - Overriding Request Validation Errors",
+    "content": "### Context: FastAPI: Error Handling and Exceptions > Overriding Request Validation Errors\n\nTo customize the default 422 JSON response when request validation fails:\n\n```python\nfrom fastapi.exceptions import RequestValidationError\nfrom fastapi.responses import PlainTextResponse\n\n@app.exception_handler(RequestValidationError)\nasync def validation_exception_handler(request: Request, exc: RequestValidationError):\n    return PlainTextResponse(str(exc), status_code=400)\n```",
+    "char_length": 473
+  },
+  {
+    "chunk_id": "08_testing_and_overrides.md#testclient",
+    "doc_name": "08_testing_and_overrides.md",
+    "section_title": "FastAPI: Testing and Dependency Overrides - TestClient",
+    "content": "### Context: FastAPI: Testing and Dependency Overrides > TestClient\n\nFastAPI provides `TestClient`, based on `httpx`, which allows testing endpoints without running an HTTP network server:\n\n```python\nfrom fastapi import FastAPI\nfrom fastapi.testclient import TestClient\n\napp = FastAPI()\n\n@app.get(\"/\")\ndef read_root():\n    return {\"msg\": \"Hello World\"}\n\nclient = TestClient(app)\n\ndef test_read_root():\n    response = client.get(\"/\")\n    assert response.status_code == 200\n    assert response.json() == {\"msg\": \"Hello World\"}\n```",
+    "char_length": 528
+  },
+  {
+    "chunk_id": "08_testing_and_overrides.md#overriding-dependencies-during-testing",
+    "doc_name": "08_testing_and_overrides.md",
+    "section_title": "Clean up overrides after test - Overriding Dependencies during Testing",
+    "content": "### Context: FastAPI: Testing and Dependency Overrides > Overriding Dependencies during Testing\n\nOne of FastAPI's most powerful features is `app.dependency_overrides`. You can swap production database sessions or external auth services with mocks:\n\n```python\nfrom fastapi.testclient import TestClient\n\ndef override_get_db():\n    try:\n        db = TestingSessionLocal()\n        yield db\n    finally:\n        db.close()\n\napp.dependency_overrides[get_db] = override_get_db\n\nclient = TestClient(app)\n\ndef test_get_users():\n    response = client.get(\"/users/\")\n    assert response.status_code == 200",
+    "char_length": 594
+  },
+  {
+    "chunk_id": "08_testing_and_overrides.md#overriding-dependencies-during-testing",
+    "doc_name": "08_testing_and_overrides.md",
+    "section_title": "Clean up overrides after test - Overriding Dependencies during Testing",
+    "content": "app.dependency_overrides.clear()\n```",
+    "char_length": 36
+  },
+  {
+    "chunk_id": "08_testing_and_overrides.md#async-tests-with-httpxasyncclient",
+    "doc_name": "08_testing_and_overrides.md",
+    "section_title": "Clean up overrides after test - Async Tests with httpx.AsyncClient",
+    "content": "### Context: Clean up overrides after test > Async Tests with httpx.AsyncClient\n\nFor async endpoints requiring async database drivers:\n\n```python\nimport pytest\nfrom httpx import AsyncClient, ASGITransport\n\n@pytest.mark.asyncio\nasync def test_async_root():\n    transport = ASGITransport(app=app)\n    async with AsyncClient(transport=transport, base_url=\"http://test\") as ac:\n        response = await ac.get(\"/\")\n    assert response.status_code == 200\n```",
+    "char_length": 453
+  }
+]

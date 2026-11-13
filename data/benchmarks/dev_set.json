@@ -1,0 +1,51 @@
+[
+  {
+    "id": "dev_01",
+    "category": "factual_api",
+    "query": "What HTTP status code is returned by FastAPI when a path parameter fails validation?",
+    "relevant_doc_ids": [
+      "01_routing_and_parameters.md#path-parameters"
+    ],
+    "ground_truth_answer": "FastAPI returns an HTTP 422 Unprocessable Entity error when a path parameter fails validation.",
+    "expected_route": "retrieve_standard"
+  },
+  {
+    "id": "dev_02",
+    "category": "code_synthesis",
+    "query": "How do you define a dependency with cleanup or teardown logic?",
+    "relevant_doc_ids": [
+      "03_dependency_injection.md#dependencies-with-yield-context-managers-db-sessions"
+    ],
+    "ground_truth_answer": "Use a generator function with `yield`. Code prior to yield runs as setup, and code after yield in a finally block runs as teardown.",
+    "expected_route": "retrieve_standard"
+  },
+  {
+    "id": "dev_03",
+    "category": "multi_hop",
+    "query": "Can background tasks be added inside custom dependencies in FastAPI?",
+    "relevant_doc_ids": [
+      "03_dependency_injection.md#defining-and-using-dependencies",
+      "06_background_tasks.md#background-tasks-in-dependencies"
+    ],
+    "ground_truth_answer": "Yes, you can declare BackgroundTasks as a parameter in a dependency function, and call background_tasks.add_task() inside it.",
+    "expected_route": "retrieve_multi_hop"
+  },
+  {
+    "id": "dev_04",
+    "category": "unanswerable_negative",
+    "query": "How do I configure Django ORM models inside FastAPI using @app.register_model?",
+    "relevant_doc_ids": [],
+    "ground_truth_answer": "This feature is not supported in FastAPI documentation. FastAPI uses Pydantic or SQLModel/SQLAlchemy, and does not have an @app.register_model decorator.",
+    "expected_route": "reject"
+  },
+  {
+    "id": "dev_05",
+    "category": "adversarial_paraphrase",
+    "query": "How do I filter out confidential attributes like passwords from outbound HTTP payloads?",
+    "relevant_doc_ids": [
+      "01_routing_and_parameters.md#response-model-and-filtering"
+    ],
+    "ground_truth_answer": "Use the response_model parameter in route decorators (e.g., response_model=UserOut) to automatically filter sensitive fields from the output response.",
+    "expected_route": "retrieve_standard"
+  }
+]
